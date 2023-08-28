@@ -1,0 +1,91 @@
+---
+title: "ESPM 142 Introduction to R Notebooks"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*. 
+
+```{r}
+plot(cars)
+```
+
+
+
+
+
+Each time we run an R notebook, we have to complete a few housekeeping tasks before we can get started with our analysis. The first task is always to install and load the packages we are going to use. Packages contain useful functions for things like making graphs, reading in different types of files, and running statistical tests. Run this cell to install and load the packages.
+```{r message=FALSE}
+if (!require("pacman")) install.packages("pacman")
+  pacman::p_load(tidyverse, ggplot2, googlesheets4)
+```
+
+Next we are going to read in the data. For this exercise, we will be practicing with a simulated data set representing observations of time spent on different models of host cues by a parasitoid wasp (Melittobia digitata). We will call the data "Mdigi_host"). 
+
+In this experiment, six observers (all named after wasps) recorded the time (in seconds) that M. digitata spent interacting with three different objects: One pupa of its laboratory host, the flesh fly Sarcophaga bullata (the column called whole_pupa); one clay model designed to look like an S. bullata pupa (model_nochem); and one clay model treated with chemical extracts from an S. bullata pupa (chem_only).
+
+First we will read in the file and look at it. Note that the notebook only shows the first 10 rows of the table, but you can click the numbers at the bottom to see the rest of the data.
+```{r}
+Mdigi_host<-read.csv("Mdigi_HostChoice_SimData.csv")
+treatments<-colnames(Mdigi_host)[3:5]
+Mdigi_host
+```
+
+We can get a general sense of our data by plotting it out and generating "summary statistics," typically the mean and standard deviation for each group. Run this box to produce a bar graph showing the mean number of seconds M. digitata spent on each potential host. The error bars represent the standard deviation of each group. 
+
+First we print the summary statistics, here mean and standard error
+```{r}
+se=function(x){sd(x)/sqrt(length(x))} #the formula for standard error
+df<-data.frame(rbind(mean=lapply(Mdigi_host[,3:5], mean), se=lapply(Mdigi_host[,3:5], se)))
+```
+
+Next we'll plot the average time spent on each host, with standard error represented by error bars
+```{r}
+pi<-ggplot2::ggplot(data=Mdigi_host %>% summarise_at(treatments, mean) %>% pivot_longer(everything(), names_to = "Treatment", values_to = "MeanTime"), aes(x=Treatment, y=MeanTime)) + 
+  geom_col(fill=c("darkred", 
+                  "darkgreen",
+                  "darkblue"))
+  
+pi
+```
+
+Now we can run a statistical test to determine whether the time wasps spent on each model host differed significantly between different treatment groups. For this experiment, we will run an ANOVA followed by a Tukey HSD (Tukey's Honest Significant Differences).
+
+Typically, we say that treatments are significantly different if the p-values are less than 0.05. For the Tukey HSD test, the p-values are displayed in the final column of the output, called "p adj."
+
+How do these values compare to what you see in the figure above? Does the statistical test support the conclusions you drew from the figure?
+```{r}
+Mdigi_host_longer<-Mdigi_host %>% pivot_longer(cols=3:5, names_to = "Treatment", values_to = "Time")
+anova<-aov(Time~Treatment, data=Mdigi_host_longer)
+summary(anova)
+tukey<-TukeyHSD(anova)
+tukey
+```
+The above cells demonstrate one way that we will use R notebooks in this course to analyze our lab results. One of the exciting things about working with data analysis is that we can apply different methods to ask new questions about our data.
+
+The following cells are optional, but they demonstrate how thinking crticically about our data and analysis can reveal interesting patterns.
+
+
+####OPTIONAL####
+
+1. Observer Bias
+What happens if we split apart the mean times spent on each host by observer? Do you see any effect of observer bias (systematic differences in the data collected by one observer)?
+```{r}
+
+```
+
+
+
+2. Commonalities between treatment groups--what happens when we combine both treatments with chemicals present?
+```{r}
+
+```
+
+
+3. Looking at individual differences between the wasps (random effects variable)
+```{r}
+
+```
+
+
