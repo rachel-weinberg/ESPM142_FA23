@@ -47,6 +47,7 @@ Next we'll plot the average time spent on each host, with standard error represe
 lower=c(SumStats$mean-SumStats$se)
 upper=c(SumStats$mean+SumStats$se)
 pe<-ggplot(data=SumStats, aes(x=Treatment, y=mean, fill=Treatment)) + geom_col(show.legend = FALSE)+geom_errorbar(ymin=lower, ymax=upper)
+pe
 ```
 
 Now we can run a statistical test to determine whether the time wasps spent on each model host differed significantly between different treatment groups. For this experiment, we will run an ANOVA followed by a Tukey HSD (Tukey's Honest Significant Differences).
