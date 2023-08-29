@@ -37,17 +37,16 @@ We can get a general sense of our data by plotting it out and generating "summar
 First we print the summary statistics, here mean and standard error
 ```{r}
 se=function(x){sd(x)/sqrt(length(x))} #the formula for standard error
-df<-data.frame(rbind(mean=lapply(Mdigi_host[,3:5], mean), se=lapply(Mdigi_host[,3:5], se)))
+
+SumStats<-Mdigi_host %>% pivot_longer(cols=3:5, names_to = "Treatment", values_to = "Time") %>% group_by(Treatment) %>% summarise(mean=mean(Time), se=se(Time))
+SumStats
 ```
 
 Next we'll plot the average time spent on each host, with standard error represented by error bars
 ```{r}
-pi<-ggplot2::ggplot(data=Mdigi_host %>% summarise_at(treatments, mean) %>% pivot_longer(everything(), names_to = "Treatment", values_to = "MeanTime"), aes(x=Treatment, y=MeanTime)) + 
-  geom_col(fill=c("darkred", 
-                  "darkgreen",
-                  "darkblue"))
-  
-pi
+lower=c(SumStats$mean-SumStats$se)
+upper=c(SumStats$mean+SumStats$se)
+pe<-ggplot(data=SumStats, aes(x=Treatment, y=mean, fill=Treatment)) + geom_col(show.legend = FALSE)+geom_errorbar(ymin=lower, ymax=upper)
 ```
 
 Now we can run a statistical test to determine whether the time wasps spent on each model host differed significantly between different treatment groups. For this experiment, we will run an ANOVA followed by a Tukey HSD (Tukey's Honest Significant Differences).
@@ -70,22 +69,10 @@ The following cells are optional, but they demonstrate how thinking crticically 
 ####OPTIONAL####
 
 1. Observer Bias
-What happens if we split apart the mean times spent on each host by observer? Do you see any effect of observer bias (systematic differences in the data collected by one observer)?
+What happens if we split apart the mean times spent on each host by observer? Do you see any effect of observer bias (systematic differences in the data collected by one observer)? What might that look like on this plot?
 ```{r}
+Obs<-Mdigi_host %>% pivot_longer(cols=3:5, names_to = "Treatment", values_to = "Time") %>% group_by(Observer, Treatment) %>% summarise(mean=mean(Time), se=se(Time))
 
+po<-ggplot(data=Obs, aes(x=Treatment, y=mean, fill=Observer))+geom_col(position = position_dodge())
+po
 ```
-
-
-
-2. Commonalities between treatment groups--what happens when we combine both treatments with chemicals present?
-```{r}
-
-```
-
-
-3. Looking at individual differences between the wasps (random effects variable)
-```{r}
-
-```
-
-
