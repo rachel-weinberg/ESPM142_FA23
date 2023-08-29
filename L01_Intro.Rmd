@@ -64,7 +64,7 @@ tukey
 ```
 The above cells demonstrate one way that we will use R notebooks in this course to analyze our lab results. One of the exciting things about working with data analysis is that we can apply different methods to ask new questions about our data.
 
-The following cells are optional, but they demonstrate how thinking crticically about our data and analysis can reveal interesting patterns.
+The next cell is optional, but it demonstrates how visualizing our data in different ways can reveal interesting and important patterns.
 
 
 ####OPTIONAL####
