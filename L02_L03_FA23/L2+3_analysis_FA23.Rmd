@@ -26,11 +26,15 @@ if (!require("pacman")) install.packages("pacman")
 
 3. After you have changed those lines, run the cell to make sure the data look correct. Click the boxes that appear below the cells to see each of the two data tables that you imported
 ```{r import data}
-name<-"Rachel"
-team<-"Rachel and Neil"
+name<-"Marcella"
+team<-"Marcella and Jenan"
 
 l2<-read_excel('L02 Real Flower Data.xlsx', sheet=name)
-l3<-read_excel('L03 Artificial Flower Data.xlsx', sheet=team)
+#l3<-read_excel('L03 Artificial Flower Data.xlsx', sheet=team)
+#l2$Behavior<-tolower(l2$Behavior)
+#l2[is.na(l2)]<-0
+#l3[is.na(l3)]<-0
+#l3$Behavior<-tolower(l3$Behavior)
 l2
 l3
 ```
@@ -38,7 +42,7 @@ l3
 #Box 2. Organize the data into one table. The output should be a data table with the first 20 rows holding the data for your week 1 real flower observations and the next 32 rows holding the data for your artificial flowers 
 
 ```{r}
-dat<-rbind(l2, l3 %>% unite(Flower, c("Flower", "Trial Number"), sep="."))
+dat<-rbind(l2, l3[,-2])
 dat <-cbind(Type=c(rep("Real", nrow(l2)), rep("Artificial", nrow(l3))), dat)
 dat
 ```
@@ -67,7 +71,7 @@ SumStats_artificial
 
 Note that the number 1-4 after each flower type in the artificial flower plot represent the four different observation periods.
 
-```{r}
+```{r message=FALSE}
 taxa<-colnames(dat[4:ncol(dat)])
 beh_lower<-SumStats_behavior$Average-SumStats_behavior$SE
 beh_upper<-SumStats_behavior$Average+SumStats_behavior$SE
@@ -79,7 +83,8 @@ real_flowers<-ggplot(data=dat[1:nrow(l2),] %>% pivot_longer(colnames(dat[4:ncol(
 
 real_flowers
 
-artificial<-ggplot(data=dat[(nrow(l2)+1):52,] %>% pivot_longer(colnames(dat[4:ncol(dat)]), names_to="Insect", values_to="Observations") %>% group_by(Flower), aes(x=Flower, y=Observations, fill=Behavior))+
+#check this line
+artificial<-ggplot(data=dat[(nrow(l2)+1):nrow(dat),] %>% pivot_longer(colnames(dat[4:ncol(dat)]), names_to="Insect", values_to="Observations") %>% group_by(Flower), aes(x=Flower, y=Observations, fill=Behavior))+
   geom_col(position="dodge") + theme(axis.text.x=element_text(angle=45, hjust=1), axis.title.x = element_text(vjust=0.5)) + ggtitle("Observed Behaviors on Artificial Flowers")
 
 artificial
@@ -102,23 +107,20 @@ tax_lower<-SumStats_taxa$Average+SumStats_taxa$SE
 
 real_flowers_type<-ggplot(data=dat[1:nrow(l2),] %>% pivot_longer(colnames(dat[4:ncol(dat)]), names_to="Insect", values_to="Observations") %>% group_by(Insect, Flower) %>% summarise(Total=sum(Observations)), aes(x=Flower, y=Total, fill=Insect))+
   geom_col(position="dodge")+
-  ggtitle("Types of Insects Observed on Real Flowers")
+  ggtitle("Types of Insects Observed on Real Flowers") + scale_fill_brewer(palette="Set1")
 
 
 real_flowers_type
 
-artificial_type<-ggplot(data=dat[(nrow(l2)+1):52,] %>% pivot_longer(taxa, names_to="Insect", values_to="Observations") %>% group_by(Insect, Flower) %>%  summarise(Total=sum(Observations)), aes(x=Flower, y=Total))+
-  geom_col(position="dodge", aes(fill=Insect)) + theme(axis.text.x=element_text(angle=45, hjust=1), axis.title.x = element_text(vjust=0.5)) + ggtitle("Types of Insects Observed on Artificial Flowers")
+#check dat here
+artificial_type<-ggplot(data=dat[(nrow(l2)+1):nrow(dat),] %>% pivot_longer(taxa, names_to="Insect", values_to="Observations") %>% group_by(Insect, Flower) %>%  summarise(Total=sum(Observations)), aes(x=Flower, y=Total))+
+  geom_col(position="dodge", aes(fill=Insect)) + theme(axis.text.x=element_text(angle=45, hjust=1), axis.title.x = element_text(vjust=0.5)) + ggtitle("Types of Insects Observed on Artificial Flowers") + scale_fill_brewer(palette="Set1")
 
 artificial_type
 
-artificial_type<-ggplot(data=dat[(nrow(l2)+1):52,] %>% pivot_longer(taxa, names_to="Insect", values_to="Observations") %>% group_by(Insect, Flower) %>%  summarise(Total=sum(Observations)), aes(x=Flower, y=Total))+
-  geom_col(position="dodge", aes(fill=Insect)) + theme(axis.text.x=element_text(angle=45, hjust=1), axis.title.x = element_text(vjust=0.5)) + ggtitle("Total Insects on Artificial Flowers by Type")
-
-
 combined_type<-ggplot(data=dat %>% pivot_longer(colnames(dat[4:ncol(dat)]), names_to="Insect", values_to="Observations") %>% group_by(Type, Insect) %>% summarise(Average=mean(Observations), SE=se(Observations)), aes(x=Type, y=Average, fill=Insect))+
   geom_col(position="dodge")+ ylim(0,6)+
-  labs(title="Average Number of Observed Insects on Real and Artificial Flowers", x="Flower Type", y="Average Number of Observations") + geom_errorbar(ymin=tax_lower, ymax=tax_upper, position = "dodge")
+  labs(title="Average Number of Observed Insects on Real and Artificial Flowers", x="Flower Type", y="Average Number of Observations") + geom_errorbar(ymin=tax_lower, ymax=tax_upper, position = "dodge") + scale_fill_brewer(palette="Set1")
 
 combined_type
 ```
@@ -128,9 +130,11 @@ For the final plot, we'll look at just the two flowers you constructed side-by-s
 ```{r}
 art_lower<-SumStats_artificial$Average-SumStats_artificial$SE
 art_upper<-SumStats_artificial$Average+SumStats_artificial$SE
+ymax<-max(art_upper)+0.5
+
 
 broad_v_target<-ggplot(data=SumStats_artificial, aes(x=Flower, y=Average, fill=Insect))+
-  geom_col(position="dodge") + ylim(0,6) + geom_errorbar(ymin=art_lower, ymax=art_upper, position="dodge") + labs(title="Average Number of Interactions by Each Insect Type on Artificial Flowers", y="Average number of Interactions", x="Artificial Flower Design") + scale_fill_brewer(palette="Accent")
+  geom_col(position="dodge") + ylim(0,ymax) + geom_errorbar(ymin=art_lower, ymax=art_upper, position="dodge") + labs(title="Average Number of Interactions by Each Insect Type on Artificial Flowers", y="Average number of Interactions", x="Artificial Flower Design") + scale_fill_brewer(palette="Set1")
 
 broad_v_target
 ```
@@ -152,6 +156,8 @@ Box 7. We calculated descriptive statistics for three different groupings in Box
 This first box outputs a table of t-test results to answer question #1
 ```{r}
 dat1<-dat %>% select(Type, Behavior, all_of(taxa)) %>% group_by(Type, Behavior) %>% mutate(total=rowSums(across(c(taxa))))
+#
+
 
 visit<-dat1 %>% filter(Behavior=="visit")
 landing<-dat1 %>% filter(Behavior=="landing")
@@ -205,6 +211,36 @@ colnames(taxa_t)<-colnames(beh_t)<-c("Insect", "Mean_Artificial", "Mean_Real", "
 rownames(taxa_t)<-NULL
 
 taxa_t
+```
+This box outputs a table of t-test results for question #3: Is there a difference in the types of insects that interact with the broad range and targeted artificial flower?
+
+```{r}
+dat3 <- l3 %>% pivot_longer(cols=all_of(taxa), names_to="Insect", values_to="Total") %>% group_by(Flower)
+
+bee_a<-dat3 %>% filter(Insect=="bee_wasp")
+butterfly_a<-dat3 %>% filter(Insect=="butterfly_moth")
+fly_a<-dat3 %>% filter(Insect=="fly")
+beetle_a<-dat3 %>% filter(Insect=="beetle")
+
+
+t_bee<-t.test(Total~Flower, data=bee_a)
+tbt<-c("bee_wasp",  t_bee$estimate[[1]], t_bee$estimate[[2]], t_bee$p.value)
+
+t_butterfly<-t.test(Total~Flower, data=butterfly_a)
+tmt<-c("butterfly_moth",  t_butterfly$estimate[[1]], t_butterfly$estimate[[2]], t_butterfly$p.value)
+
+t_fly<-t.test(Total~Flower, data=fly_a)
+tft<-c("fly",  t_fly$estimate[[1]], t_fly$estimate[[2]], t_fly$p.value)
+
+t_beetle<-t.test(Total~Flower, data=bee_a)
+tet<-c("beetle",  t_beetle$estimate[[1]], t_beetle$estimate[[2]], t_beetle$p.value)
+
+taxa_tb<-data.frame(rbind(tbt, tmt, tft, tet))
+colnames(taxa_tb)<-c("Insect", "Mean_Artificial", "Mean_Real", "P-value")
+rownames(taxa_tb)<-NULL
+
+taxa_tb
+
 ```
 
 
