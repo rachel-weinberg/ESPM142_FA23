@@ -26,8 +26,8 @@ if (!require("pacman")) install.packages("pacman")
 
 3. After you have changed those lines, run the cell to make sure the data look correct. Click the boxes that appear below the cells to see each of the two data tables that you imported
 ```{r import data}
-name<-"Marcella"
-team<-"Marcella and Jenan"
+name<-"my name"
+team<-"my group"
 
 l2<-read_excel('L02 Real Flower Data.xlsx', sheet=name)
 #l3<-read_excel('L03 Artificial Flower Data.xlsx', sheet=team)
