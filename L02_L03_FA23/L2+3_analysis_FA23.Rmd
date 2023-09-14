@@ -30,11 +30,11 @@ name<-"my name"
 team<-"my group"
 
 l2<-read_excel('L02 Real Flower Data.xlsx', sheet=name)
-#l3<-read_excel('L03 Artificial Flower Data.xlsx', sheet=team)
-#l2$Behavior<-tolower(l2$Behavior)
-#l2[is.na(l2)]<-0
-#l3[is.na(l3)]<-0
-#l3$Behavior<-tolower(l3$Behavior)
+l3<-read_excel('L03 Artificial Flower Data.xlsx', sheet=team)
+l2$Behavior<-tolower(l2$Behavior)
+l2[is.na(l2)]<-0
+l3[is.na(l3)]<-0
+l3$Behavior<-tolower(l3$Behavior)
 l2
 l3
 ```
@@ -83,7 +83,6 @@ real_flowers<-ggplot(data=dat[1:nrow(l2),] %>% pivot_longer(colnames(dat[4:ncol(
 
 real_flowers
 
-#check this line
 artificial<-ggplot(data=dat[(nrow(l2)+1):nrow(dat),] %>% pivot_longer(colnames(dat[4:ncol(dat)]), names_to="Insect", values_to="Observations") %>% group_by(Flower), aes(x=Flower, y=Observations, fill=Behavior))+
   geom_col(position="dodge") + theme(axis.text.x=element_text(angle=45, hjust=1), axis.title.x = element_text(vjust=0.5)) + ggtitle("Observed Behaviors on Artificial Flowers")
 
