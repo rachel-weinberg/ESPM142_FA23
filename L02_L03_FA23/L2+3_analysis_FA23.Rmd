@@ -90,7 +90,7 @@ artificial
 
 
 combined<-ggplot(data=dat %>% pivot_longer(colnames(dat[4:ncol(dat)]), names_to="Insect", values_to="Observations") %>% group_by(Type, Behavior) %>% summarise(Average=mean(Observations), SE=se(Observations)), aes(x=Type, y=Average, fill=Behavior))+
-  geom_col(position="dodge")+ ylim(0,4)+
+  geom_col(position="dodge")+ ylim(0,6)+
   labs(title="Average Number of Observed Insect Behaviors on Real and Artificial Flowers", x="Flower Type", y="Average Number of Observations") + geom_errorbar(ymin=beh_lower, ymax=beh_upper, position = "dodge")
 
 combined
@@ -235,7 +235,7 @@ t_beetle<-t.test(Total~Flower, data=bee_a)
 tet<-c("beetle",  t_beetle$estimate[[1]], t_beetle$estimate[[2]], t_beetle$p.value)
 
 taxa_tb<-data.frame(rbind(tbt, tmt, tft, tet))
-colnames(taxa_tb)<-c("Insect", "Mean_Artificial", "Mean_Real", "P-value")
+colnames(taxa_tb)<-c("Insect", "Mean_Broad", "Mean_Target", "P-value")
 rownames(taxa_tb)<-NULL
 
 taxa_tb
