@@ -200,7 +200,7 @@ t_ra_butterfly<-t.test(Total~Type, data=butterfly)
 tm<-c("butterfly_moth", t_ra_butterfly$estimate[[1]], t_ra_butterfly$estimate[[2]], t_ra_butterfly$p.value)
 
 t_ra_fly<-t.test(Total~Type, data=fly)
-tf<-tm<-c("fly", t_ra_fly$estimate[[1]], t_ra_fly$estimate[[2]], t_ra_fly$p.value)
+tf<-c("fly", t_ra_fly$estimate[[1]], t_ra_fly$estimate[[2]], t_ra_fly$p.value)
 
 t_ra_beetle<-t.test(Total~Type, data=beetle)
 tt<-c("beetle", t_ra_beetle$estimate[[1]], t_ra_beetle$estimate[[2]], t_ra_beetle$p.value)
