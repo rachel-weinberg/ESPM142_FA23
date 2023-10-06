@@ -1,0 +1,107 @@
+---
+title: "L06_analysis"
+author: "Weinberg"
+date: "2023-10-03"
+output: html_document
+---
+#Box 0. Load the libraries
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(readxl)
+library(ggplot2)
+```
+
+#Box 1. Import the data
+```{r import}
+dt<-read_excel("L06_Relocation_ClassData_FA23.xlsx", col_types=c("text", "text", "skip", rep("numeric", 6)), na = "NA")
+
+colnames(dt)<-c("student_names", "colony", "time_first_ant", "time_first_brood", "time_first_queen", "crossing_low", "crossing_med", "crossing_high")
+```
+
+
+#Box 2. View the summary statistics (mean and standard deviation, sd) of the time it took for ants of each type from each colony to climb onto the bridge.
+
+The first table that shows up will report these statistics over the entire data set and the second table breaks them up by colony.
+
+An "NA" or "NaN" value in the summary data indicates that the event was either not recorded (e.g., no Clark Kerr queens were observed crossing) or there was not enough data to compute the statistic (e.g., only one AB queen was observed crossing, so there is no standard deviation.)
+```{r}
+
+dt_times<-dt[,c("colony", "time_first_ant", "time_first_queen", "time_first_brood")]
+
+dt_tsum_tot<-dt_times %>% summarise_at(c("time_first_ant", "time_first_queen", "time_first_brood"), na.rm=TRUE, list(mean,sd))
+colnames(dt_tsum_tot)<-c("firstant.mean", "firstqueen.mean", "firstbrood.mean", "firstant.sd", "firstqueen.sd", "firstbrood.sd")
+
+dt_time_summary<- dt_times %>% group_by(colony) %>% summarise(firstworker_mean=mean(time_first_ant), firstworker_sd=sd(time_first_ant), firstqueen_mean=mean(time_first_queen[!is.na(time_first_queen)]), firstqueen_sd=sd(time_first_queen[!is.na(time_first_queen)]), firstbrood_mean=mean(time_first_brood[!is.na(time_first_brood)]), firstbrood_sd=sd(time_first_brood[!is.na(time_first_brood)])) %>% pivot_longer(-colony, names_to=c("type", ".value"), names_sep="_")
+
+dt_tsum_tot
+dt_time_summary
+```
+
+#Box 3. Plot time to first ant of each type crossing 
+This will plot the mean and standard deviation of the time it took from bridge placement to the first crossing of each ant type: workers, queens, and brood. the height of the bars represents the mean and the error bars show the standard deviation.
+
+Give the plot a descriptive title by replacing the text "My plot title" with the title you wish to use. Make sure to keep the title in quotation marks!
+```{r}
+plot_title_first_ant<-"My plot title"
+
+plot_ant1<-ggplot(data=dt_time_summary, aes(type, y=mean, fill=colony))+ 
+  geom_col(position=position_dodge())+labs(title=plot_title_first_ant, x="time to first crossing", y="time to crossing") + geom_errorbar(aes(x=type, ymin=mean-sd, ymax=mean+sd), linewidth=0.5, position=position_dodge())
+
+plot_ant1
+```
+
+
+
+#Box 4. View summary statistics for the rate of ant crossing by each flow rate. The table below shows the mean and standard deviation in the number of ants crossing per minute at each flow rate for each colony.
+```{r}
+dt_flow<-dt[,c("colony", "crossing_low", "crossing_med", "crossing_high")]
+
+dt_flow_summary<- dt_flow %>% group_by(colony) %>% summarise(low_mean=mean(`crossing_low`), low_sd = sd(`crossing_low`), med_mean=mean(`crossing_med`), med_sd=sd(`crossing_med`), high_mean=mean(!is.na(crossing_high)), high_sd=sd(!is.na(crossing_high))) %>% pivot_longer(-colony, names_to=c("flowrate", ".value"), names_sep="_")
+
+dt_flow_summary
+```
+
+#Box 5. Plot rate of crossing at each flow rate by colony
+These box plots show the number of ants crossing at each flow rate. The solid area of each box represents the upper and lower quantile for each group and the lines represent the 95% confidence intervals. Dots outside the boxes represent outliers in the data.
+
+The first plot breaks up the number of ants crossing at each rate by colony, and the second plot shows the number of ants crossing for all three colonies combined.
+```{r}
+plot_rate_bycol<-ggplot(data=dt_flow %>% pivot_longer(cols=all_of(c("crossing_low", "crossing_med", "crossing_high")), names_to="flowrate", values_to="ants_per_minute"), aes(x=factor(flowrate, levels=c("crossing_low", "crossing_med", "crossing_high")), y=ants_per_minute, fill=colony))+ geom_boxplot(position=position_dodge())+labs(title="Movement rates of three different ant colonies", x="flow rate", y="ants crossing per minute") 
+
+#+ geom_errorbar(aes(x=flowrate, ymin=mean-sd, ymax=mean+sd), size=0.5, position=position_dodge())
+
+ plot_rate_bycol
+ 
+
+plot_rate_all<-ggplot(data=dt_flow_summary, aes(x=factor(flowrate, levels=c("low", "med", "high")), y=mean))+ 
+  geom_boxplot()+labs(title="Movement of ants at different flow rates", x="flow rate", y="ants crossing per minute")
+
+plot_rate_all
+```
+
+
+#Box 6. Calculate ANOVA to test for significant differences between colonies in the time to first worker, queen, and brood crossing the bridge.
+The table will show p-values for each pairwise comparison between colonies for the time to first worker crossing, time to first brood crossing, and time to first queen crossing. Note that if there are insufficient data to perform the comparison (for example, if no queen crossings were recorded for one colony), the result will be "NA."
+
+```{r}
+anova_fw<-aov(time_first_ant~colony, data = dt)
+anova_fq<-aov(time_first_queen~colony, data=dt)
+anova_fb<-aov(time_first_brood~colony, data=dt)
+
+
+anova_timeto<-data.frame(pvalue_firstworker=c(TukeyHSD(anova_fw)$colony[,4]), pvalue_firstbrood=c(TukeyHSD(anova_fb)$colony[,4]), pvalue_firstqueen=c("NA", TukeyHSD(anova_fq)$colony[,4], "NA"))
+anova_timeto
+```
+
+#Box 7. Calculate ANOVA for the rate of ants crossing at each flow rate per colony. 
+As in the box above, this table will show the p-values for the pairwise comparison between each combination of colonies to test for significant differences in the number of workers crossing per minute at each flow rate.
+```{r}
+anova_lowflow<-aov(`crossing_low`~colony, data=dt)
+anova_medflow<-aov(`crossing_med`~colony, data=dt)
+anova_highflow<-aov(crossing_high~colony, data=dt)
+
+
+anova_crossrate<-data.frame(pvalue_lowflow=c(TukeyHSD(anova_lowflow)$colony[,4]), pvalue_medflow=c(TukeyHSD(anova_medflow)$colony[,4]), pvalue_highflow=c(TukeyHSD(anova_highflow)$colony[,4]))
+anova_crossrate
+```
