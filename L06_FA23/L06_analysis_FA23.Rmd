@@ -43,7 +43,7 @@ This will plot the mean and standard deviation of the time it took from bridge p
 
 Give the plot a descriptive title by replacing the text "My plot title" with the title you wish to use. Make sure to keep the title in quotation marks!
 ```{r}
-plot_title_first_ant<-"My plot title"
+plot_title_first_ant<-"Time from bridge placement to first crosssing of workers, queens, and brood"
 
 plot_ant1<-ggplot(data=dt_time_summary, aes(type, y=mean, fill=colony))+ 
   geom_col(position=position_dodge())+labs(title=plot_title_first_ant, x="time to first crossing", y="time to crossing") + geom_errorbar(aes(x=type, ymin=mean-sd, ymax=mean+sd), linewidth=0.5, position=position_dodge())
