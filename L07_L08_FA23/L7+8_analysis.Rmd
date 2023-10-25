@@ -1,0 +1,185 @@
+---
+title: "L7+8_Analysis"
+author: "Weinberg"
+date: "2023-10-24"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+pacman::p_load(tidyverse, readxl, ggplot2)
+```
+This notebook will produce graphs and perform statistical tests for the following:
+
+Graphs:
+-The mean number of earwigs (±SE) across different harborage sizes (overall, males, females) overall and for both time points individually
+-Dispersal frequency of males and females
+-Regression of # dispersal events and distance between harborages
+
+
+Statistical tests:
+-Difference in earwig occupancy across harborage sizes.
+
+-Difference in dispersal frequency between males and females
+
+-Differences in 1) arrival to and 2) emigration from small and large harborages. 
+
+#Box 1
+Note that there is no statistical test provided for other harborage features you may have examined, since these will be different for each group. You may choose to analyze this separately but it will not be required for the lab report.
+```{r}
+dat_size<-read_xlsx("L7+8 Earwigs FA23.xlsx", sheet="Harborage Sizes")
+dat_disp<-read_xlsx("L7+8 Earwigs FA23.xlsx", sheet="Dispersal Events")
+
+
+#rachel complete this
+colnames(dat_disp)<-c("Group", "Week1", "Week2", "Distance", "Number", "Sex")
+
+dat_disp$Week1<-gsub(r"{\s*\([^\)]+\)}","",tolower(as.character(dat_disp$Week1)))
+dat_disp$Week2<-gsub(r"{\s*\([^\)]+\)}","",tolower(as.character(dat_disp$Week2)))
+
+
+colnames(dat_size)<-c("Group", "Size", "Males_Week1", "Females_Week1", "Total_Week1", "Males_Week2", "Females_Week2", "Total_Week2")
+
+dat_size$Size<-gsub(r"{\s*\([^\)]+\)}","",as.character(dat_size$Size))
+
+dat_disp<-na.omit(dat_disp)
+#make dispersal summary table
+
+total_earwigs<-dat_size %>% group_by(Group) %>% summarize(total_males=sum(Males_Week1), total_females=sum(Females_Week1)) 
+total_earwigs <- total_earwigs %>% mutate(total_start=rowSums(total_earwigs[2:3]))
+
+total_dispersal<-dat_disp %>% group_by(Group) %>% summarize (males_disp=sum(Number[Sex=="M"]), females_disp=sum(Number[Sex=="F"])) 
+total_dispersal<- total_dispersal %>% mutate(total_disp=rowSums(total_dispersal[2:3]))
+
+dispersal_summary<-total_earwigs %>% inner_join(total_dispersal, by=join_by(Group))
+
+dispersal_summary<-dispersal_summary %>% mutate(prop_females_disp=(females_disp/total_females), prop_males_disp=(males_disp/total_males), prop_disp_total=(total_start/total_disp))
+
+dat_disp
+dat_size
+```
+
+
+
+#Box 2. Calculate summary statistics
+The output of this box will show the mean and standard error of earwigs in each harborage size at each time point.
+
+```{r}
+se<-function(x){sd(x)/sqrt(length(x))}
+
+occupancy_summary<-dat_size %>% select(-Group) %>% pivot_longer(cols=-Size, names_to = c(".value", "Week"), names_sep="_") %>% group_by(Size, Week) %>% summarise_all(list(mean, se))
+
+colnames(occupancy_summary)<-c("Harborage Size", "Week", "Mean Males", "Mean Females", "Mean Total", "SE Males", "SE Females", "SE Total")
+
+occupancy_summary
+```
+
+#Box 3. Plotting overall occupancy across different harborage sizes: For both time points, graph the mean number of earwigs (±SE) across different harborage sizes
+Does there appear to be a difference in overall occupancy across different harborage sizes in either week?
+```{r}
+total_occupancy_title<-"Earwig Occupancy in Small and Large Harborages"
+
+pto<-ggplot(data=occupancy_summary, aes(x=as.factor(Week), y=`Mean Total`, color=`Harborage Size`))+ 
+  geom_line(aes(group=`Harborage Size`))+
+  geom_point()+
+  labs(title=total_occupancy_title, x="Week", y="Mean Number of Earwigs")+
+  geom_errorbar(aes(ymin=`Mean Total`-`SE Total`, ymax=`Mean Total`+`SE Total`), width=.2, position=position_dodge(0)) 
+
+pto
+```
+
+
+#Box 4.
+
+Test for statistical differences in earwig occupancy across harborage sizes.
+The code in this box computes a t-test comparing TOTAL earwig occupancy (for both weeks) in small and large harborages.
+
+```{r}
+dat_size$mean<-mapply(mean, dat_size$Total_Week1, dat_size$Total_Week2)
+
+
+size_ttest_mean<-t.test(mean~Size, data=dat_size)
+
+
+size_ttest<-data.frame(mean_large=size_ttest_mean$estimate[[1]], mean_small=size_ttest_mean$estimate[[2]], p_value=size_ttest_mean$p.value)
+
+size_ttest
+```
+
+
+#Box 5. Test for statistical differences in dispersal frequency between males and females (because the numbers of males and females may differ, this will be based on the percentages of each that dispersed). 
+
+```{r}
+#Make a separate table with total number of males and females
+
+
+dispersal_ttest_by_sex<-t.test(x=dispersal_summary$prop_males_disp, y=dispersal_summary$prop_females_disp)
+dispersal_ttest<-data.frame(mean_percentage_males_dispersed=dispersal_ttest_by_sex$estimate[[1]], mean_percentage_females_dispersed=dispersal_ttest_by_sex$estimate[[2]], p_value=dispersal_ttest_by_sex$p.value)
+
+
+dispersal_ttest
+```
+
+#Box 5b. Plot dispersal frequency by sex
+This graph shows the dispersal frequency of male and female earwigs in our experiment as a percentage of the number of males and females that dispersed
+```{r}
+disp_title<-"Proportion of Male and Female Earwigs Dispersing to New Harborages"
+
+disp_sex<-dispersal_summary %>% summarise(mean_males=mean(prop_males_disp), mean_females=mean(prop_females_disp), se_males=se(prop_males_disp), se_females=se(prop_females_disp)) %>% pivot_longer(everything(), names_to=c(".value", "sex"), names_sep="_")
+
+disp_plot<-ggplot(data=disp_sex, aes(x=sex, y=mean, fill=sex))+
+  geom_col(position = "dodge")+labs(title=disp_title, x="sex", y="proportion dispersed")+geom_errorbar(aes(x=sex, ymin=mean-se, ymax=mean+se), size=0.5, position=position_dodge())+scale_fill_manual(values=c("#999999", "#E69F00"))
+
+disp_plot
+```
+
+#Box 6.
+Test for statistical differences in 1) arrival to and 2) emigration from small and large harborages.
+The first table shows the results of a t-test comparing immigration TO small and large harborages
+The second result shows the t-test comparing emigration FROM small and large harborages
+
+```{r}
+small_immigration<-dat_disp %>% filter(str_detect(Week2, "small"))
+small_emigration<-dat_disp %>% filter(str_detect(Week1, "small"))
+large_immigration<-dat_disp %>% filter(str_detect(Week2, "large"))
+large_emigration<-dat_disp %>% filter(str_detect(Week1, "large"))
+
+#arrival to small vs. large harborages (from either harborage size)
+
+im_ttest<-t.test(x=small_immigration$Number, y=large_immigration$Number)
+
+em_ttest<-t.test(x=small_emigration$Number, y=large_emigration$Number)
+
+
+im_results<-data.frame(
+  mean_immigration_to_small_harborages=im_ttest$estimate[[1]],
+  mean_immigration_to_large_harborages=im_ttest$estimate[[2]],
+  p_value=im_ttest$p.value
+)
+
+em_results<-data.frame(
+  mean_emigration_from_small_harborages=em_ttest$estimate[[1]],
+  mean_emigration_from_large_harborages=em_ttest$estimate[[2]],
+  p_value=em_ttest$p.value
+)
+
+im_results
+em_results
+```
+
+#Box 7. Calculate and plot regression of number of dispersal events and distance
+
+```{r}
+plot3<-"Dispersal Distances of Male and Female Earwigs Over One Week"
+
+dispersal_dist_lm<-lm(as.numeric(Distance)~Number, data=dat_disp)
+r<-summary(dispersal_dist_lm)
+label<-paste("r.squared=", round(r$adj.r.squared, 4))
+
+disp_distance<-dat_disp %>% group_by(Distance) %>% summarise(Number=sum(Number))
+
+plot_distance<-ggplot(data=disp_distance, aes(x=Distance, y=Number))+ geom_point()+ geom_smooth(method="lm")+ggtitle(plot3) + scale_y_continuous(breaks=c(1, 2, 3, 4, 5, 6)) + geom_text(x=8, y=4.5, label=label)
+
+plot_distance
+```
+
