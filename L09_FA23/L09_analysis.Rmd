@@ -1,0 +1,110 @@
+---
+title: "L11_analysis"
+author: "Weinberg"
+date: "2022-11-01"
+output: html_document
+---
+
+#Box 0. Import the data and libraries
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+pacman::p_load(tidyverse, readxl, ggplot2)
+
+
+dat1<-read_excel("L09_Territoriality_FA23.xlsx", sheet = "Part1_NoFood")
+dat1<-dat1[,1:4]
+dat2<-read_excel("L09_Territoriality_FA23.xlsx", sheet="Part2_Food")
+dat3<-read_excel("L09_Territoriality_FA23.xlsx", sheet="Part3_NearNest-C1 in C2")
+dat4<-read_excel("L09_Territoriality_FA23.xlsx", sheet= "Part3_NearNest-C2 in C1")
+
+dat<-rbind(dat1, dat2, dat3, dat4)
+dat$condition<-c(rep("NoFood", nrow(dat1)), rep("Food", nrow(dat2)), rep("NearNest.C1inC2", nrow(dat3)), rep("NearNest.C2inC1", nrow(dat4)))
+colnames(dat)<-c("Group", "Time", "C1", "C2", "Condition")
+dat$C1<-as.numeric(dat$C1)
+dat$C2<-as.numeric(dat$C2)
+
+
+dat<-na.omit(dat)
+dat
+```
+
+
+#Box 1. Summarise the data
+This table shows the mean and standard error for the proportion of ants engaged in aggressive interactions from each colony (C1 or C2) in each condition (NoFood=Part 1, Food=Part 2, NearNest=Part 3). The data are summarized across all time points.
+
+
+```{r}
+se<-function(x){sd(x)/sqrt(length(x))}
+
+#t<- dat %>% pivot_wider(names_from=Condition, values_from = c(PropAgg_C1, PropAgg_C2), names_sep = "_")
+
+data_summary<-dat %>% select(c("C1", "C2", "Condition")) %>% group_by(Condition) %>% summarize_at(c("C1", "C2"), list(mean=mean, se=se))
+
+data_summary
+```
+
+
+#Box 2a. Plot the data: means
+Next we will create a bar plot showing the proportion of ants engaged in aggression for each condition.
+
+Do the class data seem to show any differences in mean aggression frequency in any of the conditions? How about between the colonies? Does the aggregate class data set agree with your own group's observations?
+
+```{r}
+plot_summary<-ggplot(data=data_summary %>% pivot_longer(cols=-Condition, names_to=c("Colony", ".value"), names_sep="_"), aes(x=factor(Condition, levels=c("NoFood", "Food", "NearNest.C1inC2", "NearNest.C2inC1")), y=mean, fill=Colony))+geom_col(position = "dodge")+labs(title="Proportion of Ants Engaged in Aggressive Interactions Across Different Conditions", x="Condition", y="Proportion of ants engaged in aggressive interactions")+geom_errorbar(aes(x=Condition, ymin=mean-se, ymax=mean+se), linewidth=0.5, position=position_dodge())+scale_fill_brewer(palette = "Set2")
+
+plot_summary
+```
+
+
+#Box 2b. Plot the spread of the data
+Now we will use a scatter plot to visualize variation in the data across the class data set. 
+Give this plot a descriptive title by replacing "my plot title" in the first line with the title you wish to use.
+
+What information can you gather from this plot that wasn't visible on the previous plot?
+```{r}
+
+dl<-dat %>% pivot_longer(cols=c("C1", "C2"), names_to = "Colony", values_to="ProportionAggressive")
+
+
+plot_var<-ggplot(data=dl %>% group_by(Group), aes(x=factor(Condition, levels=c("NoFood", "Food", "NearNest.C1inC2", "NearNest.C2inC1")), y=ProportionAggressive, color=factor(unlist(Group)), shape=Colony))+geom_point(position = position_dodge2(width=0.5))+labs(color="Group", title="Proportion of Ants Engaged in Aggressive Interactions Across Different Conditions", x="Condition")
+plot_var
+```
+
+
+
+#Box 3. Testing for statistical differences in the proportion of ants exhibiting aggression in each context
+This box will use ANOVA and a Tukey HSD post-hoc test to compare the proportion of ants that engaged in an aggressive encounter in each context.
+
+The column "p adj" give p-values for each of the pairwise comparisons.
+```{r}
+context_ANOVA<-aov(ProportionAggressive~Condition, data=dl)
+TukeyHSD(context_ANOVA)
+```
+
+#Box 4. Test for significant differences between the colonies in the proportion of ants that engaged in aggressive interactions
+This box will run four separate t-tests to compare aggression between colonies. Each t-test compares aggression levels between colonies in a different context.
+
+Note that the t-test results also print the means of each colony (mean in group C1, mean in group C2).
+nofood.t = experiment #1 (no food available)
+food.t = experiment #2 (food in the center container)
+nest.t = near the "nest" (tube with queens and brood)
+```{r}
+Dat.NoFood<-dl %>% filter(Condition=="NoFood")
+nofood.t<-t.test(ProportionAggressive~Colony, data=Dat.NoFood)
+
+Dat.Food<- dl %>% filter(Condition=="Food")
+food.t<-t.test(ProportionAggressive~Colony, data=Dat.Food)
+
+Dat.NearNest_C1inC2<- dl %>% filter(Condition=="NearNest.C1inC2")
+
+nestC1inC2.t<-t.test(ProportionAggressive~Colony, data=Dat.NearNest_C1inC2)
+
+Dat.NearNest_C2inC1<- dl %>% filter(Condition=="NearNest.C2inC1")
+nestC2inC1.t<-t.test(ProportionAggressive~Colony, data=Dat.NearNest_C2inC1)
+
+
+nofood.t
+food.t
+nestC1inC2.t
+nestC2inC1.t
+```
