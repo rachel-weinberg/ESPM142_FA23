@@ -1,0 +1,96 @@
+---
+title: "L12_Analysis"
+author: "Weinberg"
+date: "2022-11-07"
+output: html_document
+---
+•	Graphs and the results of statistical tests addressing whether or not there is a significant difference in classical conditioning response across life history stage, sex, and individual identity.
+
+Test for effect of the following on learning ability (MLR response to CS+ in retention test):
+•	Age
+•	Sex
+•	Individual variation
+
+
+#Box 0. Import the data and libraries
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+pacman::p_load(tidyverse, ggplot2, readxl)
+
+dat<-read_excel("L10_LearningMemory_FA23.xlsx")
+colnames(dat)<-c("group", "animal", "sex", "instar", "length", "CS_plus", "CS_minus", "control")
+dat<-na.omit(dat)
+dat
+```
+
+#Box 1. View the data and summary statistics
+In order to classify an individual as having correctly learned the conditioned stimulus, it must:
+-Exhibit the MLR when exposed to the CS+ odor
+-Not exhibit MLR when exposed to the CS- or control odor
+
+Print the percentage of cockroaches who learned the stimulus
+-By sex 
+-By instar (age)
+
+```{r}
+dat$result<-0
+for(i in 1:nrow(dat)){
+  if(dat[i,6]==1 & dat[i,7]==0 & dat[i,8]==0){dat$result[i]<-1}
+  else{dat$result[i]<-0}
+}
+perc<-function(x){sum(x)/length(x)*100}
+
+sumsex<-dat %>% group_by(sex) %>% summarize(percent.learned=perc(result))
+suminstar<- dat %>% group_by(instar) %>% summarize(percent.learned=perc(result))
+sumsex
+suminstar
+
+```
+
+#Box 2a. Plot the data by sex
+```{r}
+plot_sex<-ggplot(data = sumsex, aes(x=sex, y=percent.learned, fill=sex))+
+  geom_col()+labs(title="Percentage of Cockroaches Correctly Learning Conditioned Stimulus by Sex")
+plot_sex
+```
+
+#Box 2b. Plot the data by instar
+Replace "my plot title" in the first line below with the title you would like to use for this plot.
+```{r}
+dat$instar<-as.factor(dat$instar)
+plot_instar<-ggplot(data = suminstar, aes(x=instar, y=percent.learned, fill=instar))+
+  geom_col()+labs(title="Percentage of Cockroaches Correctly Learning Conditioned Stimulus by Age")
+
+plot_instar
+```
+#Box 2c. Plot individual learning responses 
+
+In this plot, each individual has its own value on the x-axis. A value of "1" means that the individual learned the behavior, while a value of "0" means that it did not.
+
+```{r}
+plot_individual<-ggplot(data = dat %>% mutate(ID=row_number()), aes(x=ID, y=result))+
+  geom_point(aes(shape=instar, color=sex))+labs(title="Individual Learning Responses for Madagascar Hissing Cockroaches")
+
+plot_individual
+```
+
+#Box 3. Run statistical tests (ANOVA) to investigate whether differences in learning ability vary significantly with:
+-age
+-sex
+-combination of age and sex
+
+Based on the p-values, do you see a signficant difference in the percentage of cockraoches correctly learning the stimulus based on age, sex, or both?
+```{r}
+dat$sex<-as.factor(dat$sex)
+sex.aov<-aov(result~sex, data=dat)
+
+instar.aov<-aov(result~instar, data=dat)
+
+intx.aov<-aov(result~sex*instar, data=dat)
+
+
+anovas<-data.frame(effects=c("age", "sex", "age*sex"), p_value=c(summary(instar.aov)[[1]]$`Pr(>F)`[1],
+                                                                   summary(sex.aov)[[1]]$`Pr(>F)`[1],
+                                                                   summary(intx.aov)[[1]]$`Pr(>F)`[1]))
+anovas
+```
